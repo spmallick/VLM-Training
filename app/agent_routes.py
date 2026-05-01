@@ -35,16 +35,25 @@ def create_agent_router(
     agent_templates: Jinja2Templates,
     asset_version: Callable[[], str],
 ) -> APIRouter:
-    """Routes for the agent UI and agent session API."""
+    """Routes for the agent control UI and session API.
+
+    In FastAPI, a router is a group of related web endpoints. These endpoints
+    are the "agent side" of the demo: the browser UI calls them to upload a
+    receipt, review extracted fields, start the agent, and poll progress.
+    """
     router = APIRouter()
 
     # In-progress agent runs are background tasks keyed by session. The UI polls
     # the session store for progress instead of waiting on this request.
     runner_tasks: dict[str, asyncio.Task] = {}
+
+    # File uploads require python-multipart. The fallback route below turns a
+    # missing dependency into a clear web error instead of a confusing crash.
     multipart_available = importlib.util.find_spec("multipart") is not None
 
     @router.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
+        """Render the main page where the user starts an agent run."""
         return agent_templates.TemplateResponse(
             request,
             "index.html",
@@ -60,6 +69,7 @@ def create_agent_router(
 
     @router.get("/portal/{session_id}", response_class=HTMLResponse)
     async def portal_view(request: Request, session_id: str) -> HTMLResponse:
+        """Render the progress page for one reimbursement session."""
         try:
             session = store.get_session(session_id)
         except KeyError as exc:
@@ -79,7 +89,7 @@ def create_agent_router(
 
         @router.post("/api/sessions/capture")
         async def capture_receipt(image: UploadFile = File(...), company_slug: str = Form("")) -> JSONResponse:
-            """Create a session, save the receipt image, run blur check, and ask Qwen to extract fields."""
+            """Create a session and run the receipt-intake part of the agent."""
             company = None
             if company_slug:
                 try:
@@ -92,6 +102,8 @@ def create_agent_router(
             file_path = settings.uploads_dir / f"{session_id}{extension}"
             file_path.write_bytes(await image.read())
 
+            # From this point on, the session store is the UI's source of truth.
+            # The frontend receives the session JSON and renders each event.
             store.set_receipt_image(session_id, file_path)
             if company:
                 store.append_event(
@@ -107,6 +119,8 @@ def create_agent_router(
             )
             store.append_event(session_id, "Receipt image stored locally. Starting extraction.")
 
+            # The selected portal controls which semantic fields we ask Qwen to extract.
+            # This keeps receipt extraction tied to the current task instead of a fixed form.
             extraction_template, discovered = build_extraction_template(company_slug or "soberstack")
             store.save_extraction_template(session_id, extraction_template)
             receipt_fields = requested_receipt_fields(extraction_template)
@@ -129,6 +143,7 @@ def create_agent_router(
                 raise HTTPException(status_code=500, detail=f"Receipt extraction failed: {exc}") from exc
 
             store.set_extraction(session_id, extraction)
+            # Working memory is the compact handoff from receipt understanding to browser automation.
             working_memory = build_working_memory(
                 company_slug=company_slug or "soberstack",
                 receipt_image_path=file_path,
@@ -170,6 +185,7 @@ def create_agent_router(
 
     @router.get("/api/sessions/{session_id}")
     async def get_session(session_id: str) -> JSONResponse:
+        """Return the latest session state for frontend polling."""
         try:
             session = store.get_session(session_id)
         except KeyError as exc:
@@ -178,6 +194,7 @@ def create_agent_router(
 
     @router.get("/api/sessions/{session_id}/receipt")
     async def get_receipt_image(session_id: str) -> FileResponse:
+        """Serve the uploaded receipt image back to the browser UI."""
         try:
             session = store.get_session(session_id)
         except KeyError as exc:
@@ -188,7 +205,7 @@ def create_agent_router(
 
     @router.post("/api/sessions/{session_id}/review")
     async def save_review(session_id: str, payload: dict) -> JSONResponse:
-        """Persist human-reviewed extraction fields before the agent starts."""
+        """Save the user's corrections before browser automation starts."""
         try:
             session = store.get_session(session_id)
         except KeyError as exc:
@@ -209,7 +226,7 @@ def create_agent_router(
 
     @router.post("/api/sessions/{session_id}/run")
     async def run_agent(session_id: str, request: Request) -> JSONResponse:
-        """Start the browser-driving agent loop in the background for this session."""
+        """Start the browser-driving agent loop without blocking the web request."""
         try:
             session = store.get_session(session_id)
         except KeyError as exc:

@@ -18,6 +18,8 @@ from .vision import ReceiptVisionService
 
 APP_DIR = Path(__file__).resolve().parent
 
+# These are the long-lived services shared by all HTTP requests. FastAPI calls
+# the route handlers, and the route handlers use these objects to do the work.
 settings = get_settings()
 store = SessionStore(settings.database_path)
 vision_service = ReceiptVisionService(settings)
@@ -31,7 +33,12 @@ blur_detector = BlurDetector()
 agent_templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 portal_templates = Jinja2Templates(directory=str(APP_DIR / "portal_site" / "templates"))
 
+# This is the FastAPI web application. It serves both:
+# 1. the agent control UI, and
+# 2. the sandbox company portals that the agent opens in the browser.
 app = FastAPI(title=settings.app_name)
+
+# Static files are browser assets such as CSS and JavaScript.
 app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
 
 
@@ -44,10 +51,13 @@ def asset_version() -> str:
 
 @app.on_event("startup")
 async def startup() -> None:
+    """Prepare local storage when the web server starts."""
     store.init_db()
     settings.uploads_dir.mkdir(parents=True, exist_ok=True)
 
 
+# Routers keep the two halves of the demo separate:
+# agent routes are the control system, portal routes are the target websites.
 app.include_router(
     create_agent_router(
         settings=settings,

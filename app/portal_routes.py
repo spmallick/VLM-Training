@@ -68,12 +68,17 @@ def create_portal_router(
     portal_templates: Jinja2Templates,
     asset_version: Callable[[], str],
 ) -> APIRouter:
-    """Routes for the sandbox websites the agent operates on."""
+    """Routes for the sandbox company websites.
+
+    These endpoints are the "world" the agent acts on. They render normal web
+    pages with forms, policy text, buttons, uploads, and thank-you screens. The
+    agent must use the browser to read and operate these pages.
+    """
     router = APIRouter()
 
     @router.get("/consultant-demo", response_class=HTMLResponse)
     async def consultant_demo_home(request: Request) -> HTMLResponse:
-        """Render the sandbox company picker that the agent treats as an external site."""
+        """Render the company picker page for the sandbox portals."""
         return portal_templates.TemplateResponse(
             request,
             "consultant_demo_home.html",
@@ -85,7 +90,7 @@ def create_portal_router(
 
     @router.get("/consultant-demo/{company_slug}", response_class=HTMLResponse)
     async def consultant_company_portal(request: Request, company_slug: str) -> HTMLResponse:
-        """Render one sandbox company portal with its live policy text."""
+        """Render one company portal with policy text loaded from portal-side content."""
         try:
             company = get_portal_company(company_slug)
         except KeyError as exc:
@@ -116,6 +121,7 @@ def create_portal_router(
         expense_date: str = "",
         expense_category: str = "",
     ) -> HTMLResponse:
+        """Render the page shown after a portal accepts a reimbursement form."""
         try:
             company = get_portal_company(company_slug)
         except KeyError as exc:
@@ -144,12 +150,14 @@ def create_portal_router(
 
     @router.post("/api/consultant-demo/{company_slug}/submit")
     async def submit_consultant_demo(request: Request, company_slug: str, payload: dict) -> JSONResponse:
-        """Accept a sandbox portal submission and return a thank-you redirect URL."""
+        """Accept a sandbox form submission and tell the browser where to go next."""
         try:
             company = get_portal_company(company_slug)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Unknown company portal") from exc
 
+        # Each sandbox portal uses different field names on purpose, so the
+        # submit endpoint normalizes only the fields shown on the success page.
         claim_amount = _first_present(
             payload,
             "_derived_claim_amount",
