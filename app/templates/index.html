@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ app_name }}</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body>
+    <div class="shell simple-intake-shell">
+      <main class="simple-intake-wrap">
+        <section class="card consultant-intake-card">
+          <div class="section-intro">
+            <p class="kicker">Consultant Portal</p>
+            <h1>Start a reimbursement run</h1>
+            <p class="section-copy">
+              Choose the company, capture or upload the receipt photo, then let the agent open the
+              company portal in a new window and begin filling it out.
+            </p>
+          </div>
+
+          <label class="full-width">
+            Company
+            <select id="company-select" name="company_slug">
+              <option value="">Choose the company to reimburse from</option>
+              {% for company in companies %}
+              <option value="{{ company.slug }}" data-portal-path="{{ company.portal_path }}">
+                {{ company.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <div class="camera-shell">
+            <button id="camera-launcher" class="camera-launcher" type="button">
+              <span class="camera-launcher-copy">
+                <span class="camera-launcher-kicker">Camera idle</span>
+                <strong id="camera-launcher-title">Start camera</strong>
+                <span id="camera-launcher-detail">
+                  Use the laptop camera to capture a receipt photo.
+                </span>
+              </span>
+            </button>
+            <video id="camera" playsinline muted hidden></video>
+            <canvas id="snapshot" hidden></canvas>
+            <img id="preview" alt="Receipt preview" hidden />
+            <div id="camera-controls" class="camera-controls" hidden>
+              <button id="stop-camera" class="ghost-button camera-chip" type="button">
+                Stop camera
+              </button>
+              <button id="capture-button" class="primary-button camera-chip" type="button" disabled>
+                Capture photo
+              </button>
+            </div>
+            <div id="preview-controls" class="camera-controls preview-controls" hidden>
+              <button id="restart-camera" class="secondary-button camera-chip" type="button">
+                Retake
+              </button>
+            </div>
+          </div>
+
+          <div class="capture-actions">
+            <label class="file-button">
+              <input id="upload-input" type="file" accept="image/*" />
+              Upload photo
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="run-agent-button" class="primary-button" disabled>
+              Launch portal and run agent
+            </button>
+          </div>
+
+          <p id="intake-status" class="hint intake-status">
+            Waiting for you to choose a company and provide a receipt image.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script>
+      window.APP_CONFIG = {
+        hasHfToken: {{ "true" if has_hf_token else "false" }},
+      };
+    </script>
+    <script src="/static/app.js?v={{ asset_version }}"></script>
+  </body>
+</html>

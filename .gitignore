@@ -1,0 +1,20 @@
+.env
+.DS_Store
+secrets/
+*.credentials.json
+*token.json
+
+# Python/runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Generated app state
+app/data/expense_agent.db
+app/data/uploads/
+output/
+tmp/
+
+# Local notebook checkpoints
+.ipynb_checkpoints/

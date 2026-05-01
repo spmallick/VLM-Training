@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ company.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="company-demo-body china-body">
+    <div class="company-shell">
+      <header class="china-hero china-hero-simple">
+        <div>
+          <a class="back-link" href="/consultant-demo">Back to company selection</a>
+          <p class="eyebrow">China Manufacturing Corp.</p>
+          <h1>报销申请表</h1>
+          <p class="lede">
+            请填写以下信息并上传票据。如果申请报销金额低于票据总额，请在说明栏中写明原因。
+          </p>
+        </div>
+        <div class="china-hero-badge">
+          <p class="kicker">本地化门户</p>
+          <h2>中文界面</h2>
+          <p class="hero-note">该页面使用中文标签、绿色风格和侧边政策栏。</p>
+        </div>
+      </header>
+
+      <main class="china-layout">
+        <aside class="china-side-rail">
+          <section class="china-policy-card">
+            <p class="kicker">报销政策</p>
+            <h2>{{ policy_title }}</h2>
+            <ul class="company-bullet-list">
+              {% for bullet in policy_bullets %}
+              <li>{{ bullet }}</li>
+              {% endfor %}
+            </ul>
+          </section>
+
+          <section class="china-process-card">
+            <p class="kicker">填写流程</p>
+            <ol class="workflow-mini-list">
+              <li>先填写票据信息。</li>
+              <li>再输入报销金额和说明。</li>
+              <li>最后上传附件并提交。</li>
+            </ol>
+          </section>
+        </aside>
+
+        <form id="china-form" class="china-form china-form-shell">
+          <section class="china-section">
+            <div class="company-section-head">
+              <p class="kicker">票据信息</p>
+              <h2>基础资料</h2>
+            </div>
+            <div class="simple-form-grid">
+              <label>
+                报销人姓名
+                <input name="baoxiaoren_xingming" required />
+              </label>
+              <label>
+                报销类型
+                <select name="baoxiao_leixing" required>
+                  <option value="">请选择</option>
+                  <option>餐饮</option>
+                  <option>住宿</option>
+                  <option>交通</option>
+                  <option>其他</option>
+                </select>
+              </label>
+              <label>
+                商家名称
+                <input name="shangjia_mingcheng" required />
+              </label>
+              <label>
+                消费日期
+                <input name="xiaofei_riqi" type="date" required />
+              </label>
+            </div>
+          </section>
+
+          <section class="china-section">
+            <div class="company-section-head">
+              <p class="kicker">金额说明</p>
+              <h2>报销计算</h2>
+            </div>
+            <div class="simple-form-grid">
+              <label>
+                发票总额
+                <input id="china-total" name="fapiao_zonge" inputmode="decimal" required />
+              </label>
+              <label>
+                申请报销金额
+                <input id="china-claim" name="shenqing_jine" inputmode="decimal" required />
+              </label>
+              <label class="full-width">
+                用途说明
+                <textarea name="yongtu_shuoming" rows="3" required></textarea>
+              </label>
+              <label class="full-width">
+                扣减说明
+                <textarea
+                  id="china-note"
+                  name="koujian_shuoming"
+                  rows="3"
+                  placeholder="如果报销金额低于发票总额，请填写原因。"
+                ></textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="china-section">
+            <div class="company-section-head">
+              <p class="kicker">附件上传</p>
+              <h2>凭证提交</h2>
+            </div>
+            <label class="full-width upload-panel china-upload-panel">
+              上传凭证
+              <input name="pingzheng_fujian" type="file" accept=".jpg,.jpeg,.png,.pdf" required />
+            </label>
+          </section>
+
+          <div class="company-button-row china-button-row">
+            <button class="ghost-button company-check-button" type="button" id="china-check">
+              检查金额
+            </button>
+            <button class="primary-button company-submit-button" type="submit">
+              提交报销申请
+            </button>
+          </div>
+          <p id="china-hint" class="math-hint">请确认申请金额与报销政策一致。</p>
+          <p id="china-submit-message" class="company-submit-message" aria-live="polite"></p>
+        </form>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const form = document.getElementById("china-form");
+        const total = document.getElementById("china-total");
+        const claim = document.getElementById("china-claim");
+        const note = document.getElementById("china-note");
+        const hint = document.getElementById("china-hint");
+        const messageNode = document.getElementById("china-submit-message");
+
+        const money = (value) => {
+          const num = Number.parseFloat(value || "0");
+          return Number.isFinite(num) ? num : 0;
+        };
+
+        function syncChinaHint() {
+          const totalValue = money(total.value);
+          const claimValue = money(claim.value);
+          const reducedClaim = totalValue > 0 && claimValue < totalValue;
+
+          note.required = reducedClaim;
+
+          if (!totalValue || !claimValue) {
+            hint.textContent = "请输入发票总额和申请报销金额。";
+          } else if (claimValue > totalValue) {
+            hint.textContent = "申请报销金额不能高于发票总额。";
+          } else if (reducedClaim) {
+            hint.textContent = "检测到扣减金额，请填写扣减说明。";
+          } else {
+            hint.textContent = "金额填写正常，可以提交。";
+          }
+        }
+
+        document.getElementById("china-check").addEventListener("click", syncChinaHint);
+        [total, claim].forEach((node) => node.addEventListener("input", syncChinaHint));
+        syncChinaHint();
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          syncChinaHint();
+          if (!form.reportValidity()) return;
+
+          const payload = Object.fromEntries(new FormData(form).entries());
+          payload._derived_claim_amount = claim.value;
+          payload._derived_explanation = note.value;
+
+          const response = await fetch("/api/consultant-demo/china/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const result = await response.json();
+          if (result.redirect_url) {
+            window.location.href = result.redirect_url;
+            return;
+          }
+          messageNode.textContent = `系统已接收报销申请，编号 ${result.submission_id}。`;
+        });
+      })();
+    </script>
+  </body>
+</html>

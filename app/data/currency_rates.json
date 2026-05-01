@@ -1,0 +1,15 @@
+{
+  "base_currency": "USD",
+  "rates_to_usd": {
+    "USD": 1.0,
+    "EUR": 1.08,
+    "GBP": 1.27,
+    "JPY": 0.0067,
+    "CAD": 0.74,
+    "AUD": 0.66,
+    "INR": 0.012,
+    "SGD": 0.74,
+    "THB": 0.028,
+    "AED": 0.27
+  }
+}

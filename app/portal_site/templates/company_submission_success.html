@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="{% if company.slug == 'china' %}zh-CN{% else %}en{% endif %}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ company.name }} - Submission received</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="company-demo-body submission-success-body {{ company.slug }}-body">
+    <div class="company-shell submission-shell">
+      <header class="submission-hero">
+        <div>
+          <a class="back-link" href="/consultant-demo">{{ copy.primary_cta }}</a>
+          <p class="eyebrow">{{ copy.eyebrow }}</p>
+          <h1>{{ copy.title }}</h1>
+          <p class="lede">{{ copy.message }}</p>
+        </div>
+        <aside class="submission-hero-card">
+          <p class="kicker">{{ company.name }}</p>
+          <h2>{{ submission.submission_id or "Pending" }}</h2>
+          <p class="hero-note">{{ submission.submitted_at or "-" }}</p>
+        </aside>
+      </header>
+
+      <main class="submission-grid">
+        <section class="submission-card">
+          <div class="company-section-head">
+            <p class="kicker">{{ copy.details_title }}</p>
+            <h2>{{ company.name }}</h2>
+          </div>
+          <dl class="submission-details">
+            <div>
+              <dt>{{ copy.submission_id }}</dt>
+              <dd>{{ submission.submission_id or "-" }}</dd>
+            </div>
+            <div>
+              <dt>{{ copy.submitted_at }}</dt>
+              <dd>{{ submission.submitted_at or "-" }}</dd>
+            </div>
+            <div>
+              <dt>{{ copy.claimed_amount }}</dt>
+              <dd>{{ submission.claimed_amount or "-" }}</dd>
+            </div>
+            <div>
+              <dt>{{ copy.receipt_total }}</dt>
+              <dd>{{ submission.receipt_total or "-" }}</dd>
+            </div>
+            <div>
+              <dt>{{ copy.vendor }}</dt>
+              <dd>{{ submission.vendor or "-" }}</dd>
+            </div>
+            <div>
+              <dt>{{ copy.expense_date }}</dt>
+              <dd>{{ submission.expense_date or "-" }}</dd>
+            </div>
+            <div>
+              <dt>{{ copy.expense_category }}</dt>
+              <dd>{{ submission.expense_category or "-" }}</dd>
+            </div>
+            <div class="full-span">
+              <dt>{{ copy.explanation }}</dt>
+              <dd>{{ submission.explanation or "-" }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <aside class="submission-card submission-next-card">
+          <div class="company-section-head">
+            <p class="kicker">{{ copy.summary_title }}</p>
+            <h2>{{ company.tagline }}</h2>
+          </div>
+          <p class="section-copy">{{ copy.summary_body }}</p>
+          <div class="company-button-row submission-actions">
+            <a class="primary-button company-submit-button" href="/consultant-demo/{{ company.slug }}">
+              {{ copy.secondary_cta }}
+            </a>
+            <a class="ghost-button company-check-button" href="/consultant-demo">
+              {{ copy.primary_cta }}
+            </a>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>

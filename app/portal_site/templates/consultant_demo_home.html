@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consultant Reimbursement Sandbox</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="consultant-demo-body">
+    <div class="company-shell">
+      <header class="company-home-hero">
+        <div class="company-home-copy">
+          <p class="eyebrow">Consultant sandbox</p>
+          <h1>Three companies. Same reimbursement task. Very different portals.</h1>
+          <p class="lede">
+            These local portals are intentionally inconsistent. One is a simple form with a policy
+            pop-up, one is a multi-step workflow, and one is written in Chinese. The future agent
+            will need to read the UI, interpret the policy, and still file the right amount.
+          </p>
+        </div>
+        <aside class="company-home-callout">
+          <p class="kicker">Demo setup</p>
+          <ul class="company-bullet-list compact">
+            <li>Both portals live on the same local server.</li>
+            <li>Each portal uses a different flow and different field names.</li>
+            <li>One portal adds a language shift with a Chinese interface.</li>
+            <li>Each portal can submit a reduced claim with an explanation.</li>
+          </ul>
+        </aside>
+      </header>
+
+      <main class="company-card-grid">
+        {% for company in companies %}
+        <article class="company-card {{ company.slug }}-card">
+          <div class="company-card-head">
+            <div>
+              <p class="kicker">{{ company.tagline }}</p>
+              <h2>{{ company.name }}</h2>
+            </div>
+            <span class="company-card-pill">{{ company.slug }}</span>
+          </div>
+          <p class="company-card-copy">{{ company.description }}</p>
+          <div class="company-chip-row">
+            {% for teaser in company.field_teasers %}
+            <span class="company-chip">{{ teaser }}</span>
+            {% endfor %}
+          </div>
+          <a class="company-card-link" href="/consultant-demo/{{ company.slug }}">{{ company.cta_label }}</a>
+        </article>
+        {% endfor %}
+      </main>
+    </div>
+  </body>
+</html>

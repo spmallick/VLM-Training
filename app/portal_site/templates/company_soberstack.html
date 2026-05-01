@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ company.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="company-demo-body soberstack-body">
+    <div class="company-shell">
+      <header class="simple-page-hero simple-soberstack-hero">
+        <div>
+          <a class="back-link" href="/consultant-demo">Back to company selection</a>
+          <p class="eyebrow">SoberStack Consulting</p>
+          <h1>Expense report intake</h1>
+          <p class="lede">
+            Upload any business receipt for food, lodging, travel, or other approved expenses. If
+            you are not claiming the full receipt amount, explain the difference before submitting.
+          </p>
+        </div>
+        <aside class="simple-hero-card">
+          <p class="kicker">Before you submit</p>
+          <p class="simple-hero-copy">
+            Review the policy instructions and adjust your requested amount to match the reimbursable
+            portion of the receipt.
+          </p>
+          <button type="button" class="inline-link-button" id="open-soberstack-policy">
+            Read company policy
+          </button>
+        </aside>
+      </header>
+
+      <main class="simple-expense-layout">
+        <form id="soberstack-form" class="simple-expense-form">
+          <section class="simple-section">
+            <div class="company-section-head">
+              <p class="kicker">Expense details</p>
+              <h2>Basic report information</h2>
+            </div>
+            <div class="simple-form-grid">
+              <label>
+                Expense type
+                <select name="claim_bucket" required>
+                  <option value="">Choose one</option>
+                  <option>Food</option>
+                  <option>Lodging</option>
+                  <option>Travel</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>
+                Vendor name
+                <input name="merchant_name" required />
+              </label>
+              <label>
+                Expense date
+                <input name="service_day" type="date" required />
+              </label>
+              <label>
+                Employee name
+                <input name="claimer_identity" required />
+              </label>
+              <label>
+                Receipt total
+                <input id="soberstack-total" name="receipt_gross" inputmode="decimal" required />
+              </label>
+              <label>
+                Amount requested
+                <input id="soberstack-claim" name="requested_reimbursement" inputmode="decimal" required />
+              </label>
+              <label class="full-width">
+                Business reason
+                <textarea name="client_story" rows="4" required></textarea>
+              </label>
+              <label class="full-width">
+                Adjustment explanation
+                <textarea
+                  id="soberstack-note"
+                  name="variance_note"
+                  rows="3"
+                  placeholder="Use this field if your requested amount is lower than the receipt total."
+                ></textarea>
+              </label>
+              <label class="full-width upload-panel">
+                Upload receipt
+                <input name="receipt_packet" type="file" accept=".jpg,.jpeg,.png,.pdf" required />
+              </label>
+            </div>
+          </section>
+
+          <div class="company-button-row">
+            <button class="ghost-button company-check-button" type="button" id="soberstack-validate">
+              Check claim amount
+            </button>
+            <button class="primary-button company-submit-button" type="submit">
+              Submit expense report
+            </button>
+          </div>
+          <p id="soberstack-hint" class="math-hint">
+            SoberStack accepts different receipt types, but the requested amount should follow policy.
+          </p>
+          <p id="soberstack-submit-message" class="company-submit-message" aria-live="polite"></p>
+        </form>
+      </main>
+    </div>
+
+    <dialog id="soberstack-policy-dialog" class="policy-dialog">
+      <div class="policy-dialog-inner">
+        <div class="policy-dialog-head">
+          <div>
+            <p class="kicker">Company policy</p>
+            <h2>{{ policy_title }}</h2>
+          </div>
+          <button type="button" class="dialog-close-button" id="close-soberstack-policy" aria-label="Close policy dialog">
+            Close
+          </button>
+        </div>
+        <ul class="company-bullet-list">
+          {% for bullet in policy_bullets %}
+          <li>{{ bullet }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </dialog>
+
+    <script>
+      (() => {
+        const form = document.getElementById("soberstack-form");
+        const dialog = document.getElementById("soberstack-policy-dialog");
+        const total = document.getElementById("soberstack-total");
+        const claim = document.getElementById("soberstack-claim");
+        const note = document.getElementById("soberstack-note");
+        const hint = document.getElementById("soberstack-hint");
+        const messageNode = document.getElementById("soberstack-submit-message");
+
+        const money = (value) => {
+          const num = Number.parseFloat(value || "0");
+          return Number.isFinite(num) ? num : 0;
+        };
+
+        function syncClaimHint() {
+          const totalValue = money(total.value);
+          const claimValue = money(claim.value);
+          const reducedClaim = totalValue > 0 && claimValue < totalValue;
+
+          note.required = reducedClaim;
+
+          if (!totalValue || !claimValue) {
+            hint.textContent = "Enter the receipt total and the amount you want reimbursed.";
+          } else if (claimValue > totalValue) {
+            hint.textContent = "The requested amount cannot be higher than the receipt total.";
+          } else if (reducedClaim) {
+            hint.textContent = "Reduced claim detected. Add an adjustment explanation before submitting.";
+          } else {
+            hint.textContent = "The requested amount matches the receipt total.";
+          }
+        }
+
+        document.getElementById("open-soberstack-policy").addEventListener("click", () => dialog.showModal());
+        document.getElementById("close-soberstack-policy").addEventListener("click", () => dialog.close());
+        document.getElementById("soberstack-validate").addEventListener("click", syncClaimHint);
+        [total, claim].forEach((node) => node.addEventListener("input", syncClaimHint));
+        syncClaimHint();
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          syncClaimHint();
+          if (!form.reportValidity()) return;
+
+          const payload = Object.fromEntries(new FormData(form).entries());
+          payload._derived_claim_amount = claim.value;
+          payload._derived_explanation = note.value;
+
+          const response = await fetch("/api/consultant-demo/soberstack/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const result = await response.json();
+          if (result.redirect_url) {
+            window.location.href = result.redirect_url;
+            return;
+          }
+          messageNode.textContent = `Sandbox accepted ${result.claimed_amount || "the claim"} under ${result.submission_id}.`;
+        });
+      })();
+    </script>
+  </body>
+</html>

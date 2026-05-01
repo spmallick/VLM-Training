@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sandbox Portal {{ session_id }}</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="portal-body">
+    <div class="portal-shell">
+      <header class="portal-hero">
+        <div>
+          <p class="eyebrow">Sandbox portal</p>
+          <h1>Expense filing view</h1>
+          <p class="lede">
+            Session <code>{{ session_id }}</code> is mirrored here so you can keep a fullscreen view
+            of the agent filling the form.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <div class="status-line">
+            <span class="status-dot online"></span>
+            This page polls the live portal state from the local app
+          </div>
+          <p id="portal-page-status" class="hero-note">{{ session.status }}</p>
+        </div>
+      </header>
+
+      <main class="portal-standalone">
+        <section class="card portal-card wide">
+          <div class="card-header">
+            <div>
+              <p class="kicker">Live state</p>
+              <h2>Expense form</h2>
+            </div>
+            <span id="portal-view-submission" class="status-chip">Not submitted</span>
+          </div>
+          <div class="portal-grid">
+            <label>Vendor<input id="portal-vendor" readonly value="{{ session.portal_state.vendor }}" /></label>
+            <label>Date<input id="portal-transaction_date" readonly value="{{ session.portal_state.transaction_date }}" /></label>
+            <label>Total<input id="portal-total" readonly value="{{ session.portal_state.total }}" /></label>
+            <label>Subtotal<input id="portal-subtotal" readonly value="{{ session.portal_state.subtotal }}" /></label>
+            <label>Tax<input id="portal-tax" readonly value="{{ session.portal_state.tax }}" /></label>
+            <label>Currency<input id="portal-currency" readonly value="{{ session.portal_state.currency }}" /></label>
+            <label>Category<input id="portal-category" readonly value="{{ session.portal_state.category }}" /></label>
+            <label>Payment<input id="portal-payment_method" readonly value="{{ session.portal_state.payment_method }}" /></label>
+            <label class="full-width">Notes<textarea id="portal-notes" rows="4" readonly>{{ session.portal_state.notes }}</textarea></label>
+          </div>
+          <div class="portal-footer">
+            <div>
+              <span class="meta-label">Last agent action</span>
+              <p id="portal-last-agent-action">{{ session.portal_state.last_agent_action or "No agent actions yet." }}</p>
+            </div>
+            <div>
+              <span class="meta-label">Submission timestamp</span>
+              <p id="portal-submission-timestamp">{{ session.portal_state.submission_timestamp or "Pending" }}</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script>
+      const sessionId = "{{ session_id }}";
+      async function refreshPortal() {
+        const response = await fetch(`/api/sessions/${sessionId}`);
+        if (!response.ok) return;
+        const session = await response.json();
+        const portal = session.portal_state;
+        [
+          "vendor",
+          "transaction_date",
+          "total",
+          "subtotal",
+          "tax",
+          "currency",
+          "category",
+          "payment_method",
+          "notes",
+        ].forEach((field) => {
+          const node = document.getElementById(`portal-${field}`);
+          if (!node) return;
+          node.value = portal[field] || "";
+        });
+        document.getElementById("portal-last-agent-action").textContent =
+          portal.last_agent_action || "No agent actions yet.";
+        document.getElementById("portal-page-status").textContent = `${session.status} · ${session.current_step}`;
+        document.getElementById("portal-submission-timestamp").textContent =
+          portal.submission_timestamp || "Pending";
+        document.getElementById("portal-view-submission").textContent = portal.submitted
+          ? `Submitted · ${portal.submission_id}`
+          : "Not submitted";
+      }
+      setInterval(refreshPortal, 1000);
+      refreshPortal();
+    </script>
+  </body>
+  </html>

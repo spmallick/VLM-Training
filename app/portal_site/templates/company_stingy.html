@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ company.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="company-demo-body stingy-body">
+    <div class="company-shell">
+      <header class="workflow-hero">
+        <div>
+          <a class="back-link back-link-light" href="/consultant-demo">Back to company selection</a>
+          <p class="eyebrow">Stingy Corp.</p>
+          <h1>Reimbursement workflow</h1>
+          <p class="lede">
+            Complete the policy gate, fill out the report, then review everything one more time
+            before the packet is submitted.
+          </p>
+        </div>
+        <aside class="workflow-hero-card">
+          <p class="kicker">Three-step flow</p>
+          <ol class="workflow-mini-list">
+            <li>Read the policy and agree.</li>
+            <li>Fill out the expense report.</li>
+            <li>Review and submit the request.</li>
+          </ol>
+        </aside>
+      </header>
+
+      <main class="workflow-shell">
+        <aside class="workflow-progress">
+          <div class="workflow-step is-active" data-step-marker="1">
+            <span>1</span>
+            <div>
+              <strong>Policy gate</strong>
+              <p>Read the reimbursement rules.</p>
+            </div>
+          </div>
+          <div class="workflow-step" data-step-marker="2">
+            <span>2</span>
+            <div>
+              <strong>Expense form</strong>
+              <p>Enter the claim and upload the receipt.</p>
+            </div>
+          </div>
+          <div class="workflow-step" data-step-marker="3">
+            <span>3</span>
+            <div>
+              <strong>Review</strong>
+              <p>Confirm the data before sending it.</p>
+            </div>
+          </div>
+        </aside>
+
+        <form id="stingy-form" class="workflow-form">
+          <section class="workflow-panel is-active" data-step-panel="1">
+            <div class="company-section-head">
+              <p class="kicker">Step 1</p>
+              <h2>Read the company policy</h2>
+            </div>
+            <ul class="company-bullet-list">
+              {% for bullet in policy_bullets %}
+              <li>{{ bullet }}</li>
+              {% endfor %}
+            </ul>
+            <label class="workflow-check">
+              <input id="stingy-policy-read" type="checkbox" required />
+              <span>I have read the policy and I understand that my claim amount must follow it.</span>
+            </label>
+            <div class="workflow-actions">
+              <button type="button" class="primary-button company-submit-button alt" id="stingy-next-1">
+                Continue to form
+              </button>
+            </div>
+          </section>
+
+          <section class="workflow-panel" data-step-panel="2">
+            <div class="company-section-head">
+              <p class="kicker">Step 2</p>
+              <h2>Fill out the expense report</h2>
+            </div>
+            <div class="workflow-form-grid">
+              <label>
+                Expense category
+                <select name="expense_lane" required>
+                  <option value="">Choose one</option>
+                  <option>Food</option>
+                  <option>Lodging</option>
+                  <option>Travel</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>
+                Supplier name
+                <input name="provider_stamp" required />
+              </label>
+              <label>
+                Expense date
+                <input name="activity_day" type="date" required />
+              </label>
+              <label>
+                Cost center
+                <input name="budget_owner" required />
+              </label>
+              <label>
+                Receipt total
+                <input id="stingy-total" name="gross_charge_total" inputmode="decimal" required />
+              </label>
+              <label>
+                Amount requested
+                <input id="stingy-claim" name="queue_request_total" inputmode="decimal" required />
+              </label>
+              <label class="full-width">
+                Expense explanation
+                <textarea name="why_this_matters" rows="3" required></textarea>
+              </label>
+              <label class="full-width">
+                Reduction note
+                <textarea
+                  id="stingy-note"
+                  name="exception_context"
+                  rows="3"
+                  placeholder="Required when you claim less than the receipt total."
+                ></textarea>
+              </label>
+              <label class="full-width upload-panel alt-upload-panel">
+                Upload receipt
+                <input name="supporting_packet" type="file" accept=".jpg,.jpeg,.png,.pdf" required />
+              </label>
+            </div>
+            <div class="workflow-actions">
+              <button type="button" class="ghost-button company-check-button alt" id="stingy-back-2">
+                Back
+              </button>
+              <button type="button" class="primary-button company-submit-button alt" id="stingy-next-2">
+                Review request
+              </button>
+            </div>
+          </section>
+
+          <section class="workflow-panel" data-step-panel="3">
+            <div class="company-section-head">
+              <p class="kicker">Step 3</p>
+              <h2>Review before submission</h2>
+            </div>
+            <div class="review-card">
+              <p class="review-copy">
+                Check the summary below. Stingy Corp. expects you to review the numbers one last time
+                before the packet is submitted.
+              </p>
+              <dl id="stingy-review-list" class="review-list"></dl>
+            </div>
+            <label class="workflow-check">
+              <input id="stingy-review-ack" type="checkbox" required />
+              <span>I reviewed the amounts and the uploaded receipt before submitting this request.</span>
+            </label>
+            <div class="workflow-actions">
+              <button type="button" class="ghost-button company-check-button alt" id="stingy-back-3">
+                Back to form
+              </button>
+              <button type="submit" class="primary-button company-submit-button alt">
+                Submit workflow packet
+              </button>
+            </div>
+          </section>
+
+          <p id="stingy-hint" class="math-hint">
+            Stingy Corp. uses the workflow to slow the employee down and make policy review explicit.
+          </p>
+          <p id="stingy-submit-message" class="company-submit-message light" aria-live="polite"></p>
+        </form>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const form = document.getElementById("stingy-form");
+        const total = document.getElementById("stingy-total");
+        const claim = document.getElementById("stingy-claim");
+        const note = document.getElementById("stingy-note");
+        const hint = document.getElementById("stingy-hint");
+        const reviewList = document.getElementById("stingy-review-list");
+        const messageNode = document.getElementById("stingy-submit-message");
+        const panels = [...document.querySelectorAll("[data-step-panel]")];
+        const markers = [...document.querySelectorAll("[data-step-marker]")];
+
+        let currentStep = 1;
+
+        const money = (value) => {
+          const num = Number.parseFloat(value || "0");
+          return Number.isFinite(num) ? num : 0;
+        };
+
+        function setStep(step) {
+          currentStep = step;
+          panels.forEach((panel) => {
+            panel.classList.toggle("is-active", Number(panel.dataset.stepPanel) === step);
+          });
+          markers.forEach((marker) => {
+            marker.classList.toggle("is-active", Number(marker.dataset.stepMarker) === step);
+          });
+        }
+
+        function syncReductionRule() {
+          const totalValue = money(total.value);
+          const claimValue = money(claim.value);
+          const reducedClaim = totalValue > 0 && claimValue < totalValue;
+
+          note.required = reducedClaim;
+
+          if (!totalValue || !claimValue) {
+            hint.textContent = "Enter the total charge and the amount you want reimbursed.";
+          } else if (claimValue > totalValue) {
+            hint.textContent = "The requested amount cannot be larger than the receipt total.";
+          } else if (reducedClaim) {
+            hint.textContent = "Reduced claim detected. Add a reduction note before moving to review.";
+          } else {
+            hint.textContent = "The requested amount matches the receipt total.";
+          }
+        }
+
+        function buildReview() {
+          const formData = new FormData(form);
+          const summaryItems = [
+            ["Expense category", formData.get("expense_lane") || "-"],
+            ["Supplier name", formData.get("provider_stamp") || "-"],
+            ["Expense date", formData.get("activity_day") || "-"],
+            ["Cost center", formData.get("budget_owner") || "-"],
+            ["Receipt total", formData.get("gross_charge_total") || "-"],
+            ["Amount requested", formData.get("queue_request_total") || "-"],
+            ["Reduction note", formData.get("exception_context") || "-"],
+          ];
+
+          reviewList.innerHTML = summaryItems
+            .map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`)
+            .join("");
+        }
+
+        function validateStepPanel(panel) {
+          const fields = panel.querySelectorAll("input, select, textarea");
+          for (const field of fields) {
+            if (!field.reportValidity()) return false;
+          }
+          return true;
+        }
+
+        document.getElementById("stingy-next-1").addEventListener("click", () => {
+          const policyGate = document.getElementById("stingy-policy-read");
+          if (!policyGate.reportValidity()) return;
+          setStep(2);
+        });
+
+        document.getElementById("stingy-back-2").addEventListener("click", () => setStep(1));
+        document.getElementById("stingy-next-2").addEventListener("click", () => {
+          syncReductionRule();
+          if (!validateStepPanel(panels[1])) return;
+          buildReview();
+          setStep(3);
+        });
+        document.getElementById("stingy-back-3").addEventListener("click", () => setStep(2));
+        [total, claim].forEach((node) => node.addEventListener("input", syncReductionRule));
+        syncReductionRule();
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          syncReductionRule();
+          if (!form.reportValidity()) return;
+
+          const payload = Object.fromEntries(new FormData(form).entries());
+          payload._derived_claim_amount = claim.value;
+          payload._derived_explanation = note.value;
+
+          const response = await fetch("/api/consultant-demo/stingy/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const result = await response.json();
+          if (result.redirect_url) {
+            window.location.href = result.redirect_url;
+            return;
+          }
+          messageNode.textContent = `Sandbox accepted ${result.claimed_amount || "the request"} under ${result.submission_id}.`;
+        });
+      })();
+    </script>
+  </body>
+</html>
