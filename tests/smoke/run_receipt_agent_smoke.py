@@ -32,7 +32,7 @@ from app.agent_runtime.company_targets import get_agent_company_target
 from app.config import Settings
 from app.policy import PolicyReviewService
 from app.store import SessionStore
-from app.tools import BlurDetector, CurrencyConverter
+from app.tools import CurrencyConverter
 from app.vision import ReceiptVisionService
 
 
@@ -144,7 +144,6 @@ async def run_company(
     receipt_source: Path,
     store: SessionStore,
     vision_service: ReceiptVisionService,
-    blur_detector: BlurDetector,
     currency_converter: CurrencyConverter,
     policy_service: PolicyReviewService,
 ) -> SmokeRunResult:
@@ -152,12 +151,10 @@ async def run_company(
     receipt_path = stage_receipt(receipt_source, company_slug)
     extraction_template, _discovered = build_extraction_template(company.slug)
     requested_fields = requested_receipt_fields(extraction_template)
-    blur = blur_detector.assess(receipt_path)
     extraction = await vision_service.analyze_receipt(receipt_path, requested_fields=requested_fields)
     working_memory = build_working_memory(
         company_slug=company.slug,
         receipt_image_path=receipt_path,
-        blur_check=blur,
         extraction=extraction,
         extraction_template=extraction_template,
     )
@@ -243,7 +240,6 @@ if __name__ == "__main__":
     store = SessionStore(settings.database_path)
     store.init_db()
     vision_service = ReceiptVisionService(settings)
-    blur_detector = BlurDetector()
     currency_converter = CurrencyConverter(settings.currency_rates_path)
     policy_service = PolicyReviewService(settings)
 
@@ -259,7 +255,6 @@ if __name__ == "__main__":
                     receipt_source=receipt_path,
                     store=store,
                     vision_service=vision_service,
-                    blur_detector=blur_detector,
                     currency_converter=currency_converter,
                     policy_service=policy_service,
                 )

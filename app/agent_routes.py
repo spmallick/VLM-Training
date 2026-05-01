@@ -21,7 +21,7 @@ from .config import Settings
 from .portal_site.company_portals import list_portal_companies
 from .schemas import ExpenseFields
 from .store import SessionStore
-from .tools import BlurDetector, expense_agent_tool_catalog
+from .tools import expense_agent_tool_catalog
 from .vision import ReceiptVisionService
 
 
@@ -31,7 +31,6 @@ def create_agent_router(
     store: SessionStore,
     vision_service: ReceiptVisionService,
     agent: ExpenseAutomationAgent,
-    blur_detector: BlurDetector,
     agent_templates: Jinja2Templates,
     asset_version: Callable[[], str],
 ) -> APIRouter:
@@ -111,13 +110,7 @@ def create_agent_router(
                     f"Consultant selected {company.name} as the reimbursement target.",
                     kind="action",
                 )
-            blur_check = blur_detector.assess(file_path)
-            store.append_event(
-                session_id,
-                f"Tool: blur detector marked the image as {blur_check.verdict} (score {blur_check.score:.2f}).",
-                kind="warning" if blur_check.verdict == "blurry" else "action",
-            )
-            store.append_event(session_id, "Receipt image stored locally. Starting extraction.")
+            store.append_event(session_id, "Receipt image stored locally. Starting Qwen extraction.")
 
             # The selected portal controls which semantic fields we ask Qwen to extract.
             # This keeps receipt extraction tied to the current task instead of a fixed form.
@@ -147,7 +140,6 @@ def create_agent_router(
             working_memory = build_working_memory(
                 company_slug=company_slug or "soberstack",
                 receipt_image_path=file_path,
-                blur_check=blur_check,
                 extraction=extraction,
                 extraction_template=extraction_template,
             )

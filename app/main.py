@@ -12,7 +12,6 @@ from .config import get_settings
 from .policy import PolicyReviewService
 from .portal_routes import create_portal_router
 from .store import SessionStore
-from .tools import BlurDetector
 from .vision import ReceiptVisionService
 
 
@@ -25,7 +24,6 @@ store = SessionStore(settings.database_path)
 vision_service = ReceiptVisionService(settings)
 policy_service = PolicyReviewService(settings)
 agent = ExpenseAutomationAgent(settings, store, policy_service)
-blur_detector = BlurDetector()
 
 # The agent UI and the sandbox portal UI live in separate template trees. The
 # agent opens the portal through the browser, so portal templates are target
@@ -64,7 +62,6 @@ app.include_router(
         store=store,
         vision_service=vision_service,
         agent=agent,
-        blur_detector=blur_detector,
         agent_templates=agent_templates,
         asset_version=asset_version,
     )

@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .schemas import (
-    BlurCheckResult,
     ExpenseFields,
     ExtractionPayload,
     ExtractionTemplate,
@@ -152,7 +151,6 @@ def build_working_memory(
     *,
     company_slug: str,
     receipt_image_path: Path,
-    blur_check: BlurCheckResult,
     extraction: ExtractionPayload,
     extraction_template: ExtractionTemplate,
 ) -> WorkingMemory:
@@ -193,7 +191,6 @@ def build_working_memory(
     return WorkingMemory(
         company_slug=company_slug,
         receipt_image_path=str(receipt_image_path),
-        blur_check=blur_check,
         facts=facts,
         derived_values={},
         page_requirements=[],

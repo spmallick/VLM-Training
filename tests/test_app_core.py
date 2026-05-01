@@ -7,7 +7,7 @@ from app.agent_memory import build_extraction_template, build_working_memory, co
 from app.agent import ExpenseAutomationAgent
 from app.config import Settings
 from app.policy import PolicyReviewService
-from app.schemas import BlurCheckResult, ExpenseFields, ExtractionPayload
+from app.schemas import ExpenseFields, ExtractionPayload
 from app.store import SessionStore
 from app.tools import CurrencyConverter
 from app.vision import ReceiptVisionService, normalize_amount, normalize_date, normalize_expense_category
@@ -132,7 +132,6 @@ def test_compute_reimbursement_uses_live_policy_and_full_reimbursement_fallback(
     memory = build_working_memory(
         company_slug="soberstack",
         receipt_image_path=tmp_path / "receipt.jpg",
-        blur_check=BlurCheckResult(verdict="clear", score=1000.0, confidence=0.9),
         extraction=ExtractionPayload(
             fields=ExpenseFields(
                 vendor="Dinner House",

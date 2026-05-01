@@ -3,19 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PIL import Image, ImageFilter, ImageOps, ImageStat
-
-from .schemas import BlurCheckResult, ToolDefinition
+from .schemas import ToolDefinition
 
 
 def expense_agent_tool_catalog() -> list[ToolDefinition]:
     return [
-        ToolDefinition(
-            name="check_image_quality",
-            kind="perception",
-            execution="deterministic",
-            purpose="Detect blur, darkness, or crop issues before extraction starts.",
-        ),
         ToolDefinition(
             name="extract_receipt_data",
             kind="perception",
@@ -71,44 +63,6 @@ def expense_agent_tool_catalog() -> list[ToolDefinition]:
             purpose="Pause safely when the receipt or UI is too ambiguous for confident automation.",
         ),
     ]
-
-
-class BlurDetector:
-    """Small deterministic blur detector for the demo intake gate."""
-
-    def assess(self, image_path: Path) -> BlurCheckResult:
-        image = Image.open(image_path).convert("L")
-        image = ImageOps.exif_transpose(image)
-        image.thumbnail((1200, 1200))
-
-        edge_map = image.filter(
-            ImageFilter.Kernel(
-                size=(3, 3),
-                kernel=[-1, -1, -1, -1, 8, -1, -1, -1, -1],
-                scale=1,
-            )
-        )
-        variance = float(ImageStat.Stat(edge_map).var[0])
-
-        if variance >= 1200:
-            verdict = "clear"
-            confidence = 0.92
-            summary = "The receipt edges look sharp enough for extraction."
-        elif variance >= 350:
-            verdict = "slightly_blurry"
-            confidence = 0.74
-            summary = "The receipt is readable, but the image looks a little soft."
-        else:
-            verdict = "blurry"
-            confidence = 0.9
-            summary = "The image is too blurry for a reliable extraction run."
-
-        return BlurCheckResult(
-            verdict=verdict,
-            score=round(variance, 2),
-            confidence=confidence,
-            summary=summary,
-        )
 
 
 class CurrencyConverter:

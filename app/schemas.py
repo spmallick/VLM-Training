@@ -18,13 +18,6 @@ class ExpenseFields(BaseModel):
     notes: str = ""
 
 
-class BlurCheckResult(BaseModel):
-    verdict: Literal["clear", "slightly_blurry", "blurry"] = "clear"
-    score: float = 0.0
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
-    summary: str = ""
-
-
 class ToolDefinition(BaseModel):
     name: str
     kind: Literal["perception", "reasoning", "action", "guardrail"]
@@ -57,7 +50,6 @@ class ExtractionTemplate(BaseModel):
 class WorkingMemory(BaseModel):
     company_slug: str = ""
     receipt_image_path: str = ""
-    blur_check: BlurCheckResult | None = None
     facts: dict[str, MemoryFact] = Field(default_factory=dict)
     derived_values: dict[str, MemoryFact] = Field(default_factory=dict)
     page_requirements: list[PageRequirement] = Field(default_factory=list)

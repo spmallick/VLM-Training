@@ -6,7 +6,6 @@ huggingface_hub
 pydantic-settings
 numpy
 opencv-python
-Pillow
 pytest
 playwright
 customtkinter

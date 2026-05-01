@@ -22,7 +22,7 @@ from .policy import PolicyReviewService
 from .portal_automation import PortalAutomationRunner
 from .schemas import ExpenseFields, ExtractionPayload, MemoryFact, PolicyReview, PortalState, WorkingMemory
 from .store import SessionStore
-from .tools import BlurDetector, CurrencyConverter
+from .tools import CurrencyConverter
 from .vision import normalize_amount, normalize_expense_category
 
 
@@ -32,7 +32,6 @@ class ExpenseAutomationAgent:
         self.store = store
         self.policy_service = policy_service
         self.currency_converter = CurrencyConverter(settings.currency_rates_path)
-        self.blur_detector = BlurDetector()
         self.portal_runners: dict[str, PortalAutomationRunner] = {}
 
     def _portal_runner_for_session(self, session_id: str) -> PortalAutomationRunner:
@@ -98,11 +97,9 @@ class ExpenseAutomationAgent:
 
             memory = session.working_memory
             if not memory.facts:
-                blur_check = self.blur_detector.assess(receipt_path)
                 memory = build_working_memory(
                     company_slug=company.slug,
                     receipt_image_path=receipt_path,
-                    blur_check=blur_check,
                     extraction=session.extraction,
                     extraction_template=extraction_template,
                 )
