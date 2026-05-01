@@ -12,6 +12,7 @@ __pycache__/
 
 # Generated app state
 app/data/expense_agent.db
+app/data/sample_receipts/
 app/data/uploads/
 output/
 tmp/
