@@ -33,6 +33,18 @@ class Settings(BaseSettings):
         default="Qwen/Qwen3-VL-8B-Instruct:novita",
         validation_alias=AliasChoices("HF_MODEL", "HUGGINGFACE_MODEL"),
     )
+    hf_receipt_model: str = Field(
+        default="",
+        validation_alias=AliasChoices("HF_RECEIPT_MODEL", "HUGGINGFACE_RECEIPT_MODEL"),
+    )
+    hf_policy_model: str = Field(
+        default="",
+        validation_alias=AliasChoices("HF_POLICY_MODEL", "HUGGINGFACE_POLICY_MODEL"),
+    )
+    hf_navigation_model: str = Field(
+        default="",
+        validation_alias=AliasChoices("HF_NAVIGATION_MODEL", "HF_PORTAL_MODEL", "HUGGINGFACE_NAVIGATION_MODEL"),
+    )
     hf_router_url: str = "https://router.huggingface.co/v1/chat/completions"
     hf_timeout_seconds: int = 90
     require_qwen3_vl: bool = Field(
@@ -52,6 +64,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def receipt_model(self) -> str:
+        return self.hf_receipt_model or self.hf_model
+
+    @property
+    def policy_model(self) -> str:
+        return self.hf_policy_model or self.receipt_model
+
+    @property
+    def navigation_model(self) -> str:
+        return self.hf_navigation_model or self.hf_model
 
 
 @lru_cache

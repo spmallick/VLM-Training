@@ -141,6 +141,54 @@ def test_submission_payload_can_be_recovered_from_thank_you_url():
     assert payload["vendor"] == "Main Street Restaurant"
 
 
+def test_request_qwen_json_uses_navigation_model():
+    runner = PortalAutomationRunner(
+        settings=Settings(
+            _env_file=None,
+            hf_api_token="test-token",
+            HF_MODEL="receipt-model",
+            HF_NAVIGATION_MODEL="navigation-model",
+        )
+    )
+    captured_payload = {}
+
+    async def fake_post_hf_chat(payload):
+        captured_payload.update(payload)
+        return {"choices": [{"message": {"content": '{"status": "ok"}'}}]}
+
+    runner._post_hf_chat = fake_post_hf_chat
+
+    parsed = asyncio.run(
+        runner._request_qwen_json(prompt="Plan the current page.", screenshot_data_urls=[], max_tokens=50)
+    )
+
+    assert parsed == {"status": "ok"}
+    assert captured_payload["model"] == "navigation-model"
+
+
+def test_request_qwen_json_retries_invalid_json_with_compact_prompt():
+    runner = PortalAutomationRunner(settings=Settings(_env_file=None, hf_api_token="test-token"))
+    captured_prompts = []
+    responses = [
+        {"choices": [{"finish_reason": "length", "message": {"content": '{"page_id": "review", "reasoning": "'}}]},
+        {"choices": [{"finish_reason": "stop", "message": {"content": '{"status": "continue", "actions": []}'}}]},
+    ]
+
+    async def fake_post_hf_chat(payload):
+        captured_prompts.append(payload["messages"][0]["content"][0]["text"])
+        return responses.pop(0)
+
+    runner._post_hf_chat = fake_post_hf_chat
+
+    parsed = asyncio.run(
+        runner._request_qwen_json(prompt="Plan the current page.", screenshot_data_urls=[], max_tokens=50)
+    )
+
+    assert parsed == {"status": "continue", "actions": []}
+    assert len(captured_prompts) == 2
+    assert "previous browser-planning answer was invalid JSON" in captured_prompts[1]
+
+
 def test_plan_next_actions_repairs_missing_actions_and_collects_semantic_fields():
     controls = [make_control(tag="input", input_type="text", name="provider_stamp", label="Supplier name")]
     buttons = [make_control(tag="button", text="Review request")]

@@ -165,6 +165,15 @@ def extract_json_object(text: str) -> dict | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def supports_structured_outputs(model_id: str) -> bool:
+    """Return whether the HF provider accepts OpenAI-style JSON response mode."""
+    # The Novita-hosted Qwen3-VL Thinking models currently reject
+    # response_format={"type": "json_object"} even though they can still follow
+    # an explicit "JSON only" prompt. Keep structured outputs for Instruct
+    # models and omit the flag for Thinking models.
+    return "thinking" not in (model_id or "").lower()
+
+
 class ReceiptVisionService:
     """Qwen3-VL receipt extraction service."""
 
@@ -260,6 +269,14 @@ class ReceiptVisionService:
             "- Normalize transaction_date to YYYY-MM-DD when possible.\n"
             "- Keep total/subtotal/tax as strings formatted like 12.34.\n"
             "- When visible, also extract policy-relevant semantic amounts such as tip, fare, mandatory fees, alcohol, alcohol tax, or other clearly non-business charges.\n"
+            "- For restaurant receipts, inspect any tip/gratuity section, signed merchant copy, checked box, written custom tip, circled option, or handwritten mark near a suggested tip.\n"
+            "- A slash, X, check mark, scribble, or handwritten mark inside a checkbox or directly on a suggested-tip row counts as a selected tip option. A signature by itself does not select a tip.\n"
+            "- Restaurant card receipts often show an earlier pre-tip authorization total, then a separate tip section with rows like 'Tip: 7.53, Total: 57.73'. If one of those rows is selected, the selected row is the final paid total.\n"
+            "- If a tip option or custom tip is visibly selected, set tip_amount to the selected tip and set total to the final total associated with that selected tip, not the earlier pre-tip card authorization amount.\n"
+            "- Do not call this a form error just because the selected final total differs from the earlier card authorization total; that difference is expected when a tip is selected.\n"
+            "- If a receipt shows suggested tip choices but none is visibly selected, leave tip_amount blank and use the printed receipt total.\n"
+            "- Do not treat unselected suggested tip choices as paid amounts.\n"
+            "- If alcohol appears as a line item, set alcohol_amount to the visible alcohol line total. Only set alcohol_tax_amount when the receipt separately itemizes alcohol tax; otherwise leave it blank.\n"
             "- The requested field list comes from the target form, so prioritize what the form actually needs.\n"
             "- If a semantic amount is not visible, return an empty string for that field.\n"
             "- line_item_summary should be short phrases that describe visible line items or charges.\n"
@@ -271,10 +288,11 @@ class ReceiptVisionService:
             "- Output valid JSON with no markdown fences."
         )
 
-        # JSON mode keeps the parser simple; max_tokens is sized for one receipt
-        # extraction object plus short reasoning and warnings.
+        # JSON mode keeps the parser simple where the provider supports it.
+        # Thinking models may need a little more budget and reject the
+        # response_format flag, so that compatibility check happens below.
         payload = {
-            "model": self.settings.hf_model,
+            "model": self.settings.receipt_model,
             "messages": [
                 {
                     "role": "user",
@@ -284,10 +302,11 @@ class ReceiptVisionService:
                     ],
                 }
             ],
-            "max_tokens": 500,
+            "max_tokens": 900,
             "temperature": 0.1,
-            "response_format": {"type": "json_object"},
         }
+        if supports_structured_outputs(self.settings.receipt_model):
+            payload["response_format"] = {"type": "json_object"}
 
         headers = {
             "Authorization": f"Bearer {self.settings.hf_api_token}",

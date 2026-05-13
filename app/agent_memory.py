@@ -114,6 +114,13 @@ def _format_money(value: float) -> str:
     return f"{max(value, 0.0):.2f}"
 
 
+def _prorated_tax(amount: float, subtotal: float, tax: float) -> float:
+    """Estimate tax attributable to one line item when the receipt lacks a split."""
+    if amount <= 0 or subtotal <= 0 or tax <= 0:
+        return 0.0
+    return round((amount / subtotal) * tax, 2)
+
+
 def _contains_hint(lines: list[str], hint_group: str) -> bool:
     tokens = LINE_ITEM_HINTS.get(hint_group, ())
     lowered = "\n".join(lines).lower()
@@ -303,10 +310,19 @@ def compute_reimbursement(
         or "无关" in policy_text
     )
 
+    alcohol_amount = _money(facts.get("alcohol_amount", MemoryFact()).value)
+    alcohol_tax = _money(facts.get("alcohol_tax_amount", MemoryFact()).value)
+    if excludes_alcohol and alcohol_amount > 0 and alcohol_tax == 0:
+        alcohol_tax = _prorated_tax(
+            alcohol_amount,
+            _money(facts.get("subtotal_amount", MemoryFact()).value),
+            _money(facts.get("tax_amount", MemoryFact()).value),
+        )
+
     exclusions = {
         "tip": _money(facts.get("tip_amount", MemoryFact()).value) if excludes_tip else 0.0,
-        "alcohol": _money(facts.get("alcohol_amount", MemoryFact()).value) if excludes_alcohol else 0.0,
-        "alcohol_tax": _money(facts.get("alcohol_tax_amount", MemoryFact()).value) if excludes_alcohol else 0.0,
+        "alcohol": alcohol_amount if excludes_alcohol else 0.0,
+        "alcohol_tax": alcohol_tax if excludes_alcohol else 0.0,
         "non_business": _money(facts.get("non_business_amount", MemoryFact()).value) if excludes_non_business else 0.0,
     }
     excluded = sum(exclusions.values())

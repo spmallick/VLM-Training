@@ -467,7 +467,7 @@ class ExpenseAutomationAgent:
         if self._is_demo_policy_fallback(policy_review):
             return "Demo full-reimbursement fallback"
         if self.settings.hf_api_token:
-            return f"Hugging Face VLM ({self.settings.hf_model})"
+            return f"Hugging Face VLM ({self.settings.policy_model})"
         return "Qwen3-VL unavailable"
 
     @staticmethod

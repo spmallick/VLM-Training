@@ -26,7 +26,7 @@ from playwright.async_api import (
 
 from .config import Settings, get_settings
 from .schemas import PortalState
-from .vision import extract_json_object, normalize_expense_category
+from .vision import extract_json_object, normalize_expense_category, supports_structured_outputs
 
 
 SUBMIT_BUTTON_LABELS: tuple[str, ...] = (
@@ -391,6 +391,9 @@ class PortalAutomationRunner:
             "- If submission is not allowed, never emit action=submit.\n"
             "- On a review page, if a submit button is visible, submission is allowed, and no editable text/select/file fields remain, prefer submit instead of going back.\n"
             "- If the page already shows success or thank-you, return status=done with no actions.\n"
+            "- Keep page_summary under 80 characters and reasoning under 120 characters.\n"
+            "- Keep each action reasoning under 80 characters, or use an empty string.\n"
+            "- Return one complete compact JSON object. Do not include markdown, prose, or extra keys.\n"
             f"Current URL: {current_url}\n"
             f"Page title: {page_title}\n"
             f"Screenshot count: {len(screenshot_data_urls)}\n"
@@ -403,7 +406,7 @@ class PortalAutomationRunner:
         parsed = await self._request_qwen_json(
             prompt=prompt,
             screenshot_data_urls=screenshot_data_urls,
-            max_tokens=1600,
+            max_tokens=2200,
         )
 
         page_id = str(parsed.get("page_id", "")).strip() or "current_portal_step"
@@ -783,34 +786,55 @@ class PortalAutomationRunner:
         screenshot_data_urls: list[str],
         max_tokens: int,
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "model": self.settings.hf_model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [{"type": "text", "text": prompt}]
-                    + [
-                        {"type": "image_url", "image_url": {"url": screenshot_data_url}}
-                        for screenshot_data_url in screenshot_data_urls
-                    ],
-                }
-            ],
-            "max_tokens": max_tokens,
-            "temperature": 0.0,
-        }
-        payload["response_format"] = {"type": "json_object"}
+        active_prompt = prompt
+        last_response_text = ""
+        last_finish_reason = ""
+        for attempt in range(2):
+            payload: dict[str, Any] = {
+                "model": self.settings.navigation_model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{"type": "text", "text": active_prompt}]
+                        + [
+                            {"type": "image_url", "image_url": {"url": screenshot_data_url}}
+                            for screenshot_data_url in screenshot_data_urls
+                        ],
+                    }
+                ],
+                "max_tokens": max(max_tokens, 2200),
+                "temperature": 0.0,
+            }
+            if supports_structured_outputs(self.settings.navigation_model):
+                payload["response_format"] = {"type": "json_object"}
 
-        body = await self._post_hf_chat(payload)
-        message_content = body["choices"][0]["message"]["content"]
-        if isinstance(message_content, list):
-            response_text = "\n".join(item.get("text", "") for item in message_content if isinstance(item, dict))
-        else:
-            response_text = str(message_content)
+            body = await self._post_hf_chat(payload)
+            choice = body["choices"][0]
+            last_finish_reason = str(choice.get("finish_reason", "") or "")
+            message_content = choice["message"]["content"]
+            if isinstance(message_content, list):
+                response_text = "\n".join(item.get("text", "") for item in message_content if isinstance(item, dict))
+            else:
+                response_text = str(message_content)
+            last_response_text = response_text
 
-        parsed = extract_json_object(response_text)
-        if parsed is None:
-            raise ValueError(f"Qwen response did not contain valid JSON. Preview: {response_text[:500]!r}")
-        return parsed
+            parsed = extract_json_object(response_text)
+            if parsed is not None:
+                return parsed
+
+            active_prompt = (
+                "Your previous browser-planning answer was invalid JSON or was too long.\n"
+                "Return a COMPLETE compact JSON object only. No markdown. No prose outside JSON.\n"
+                "Keep page_summary under 80 characters. Keep reasoning under 120 characters.\n"
+                "Keep action reasoning under 80 characters or use an empty string.\n"
+                "Use the exact schema and action vocabulary from the original request.\n\n"
+                f"Original request:\n{prompt}"
+            )
+
+        raise ValueError(
+            "Qwen response did not contain valid JSON"
+            f" (finish_reason={last_finish_reason or 'unknown'}). Preview: {last_response_text[:500]!r}"
+        )
 
     async def _repair_missing_actions(
         self,

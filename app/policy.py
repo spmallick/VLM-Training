@@ -7,7 +7,7 @@ import httpx
 
 from .config import Settings
 from .schemas import ExpenseFields, ExtractionPayload, PolicyIssue, PolicyReview
-from .vision import extract_json_object
+from .vision import extract_json_object, supports_structured_outputs
 
 
 class PolicyReviewService:
@@ -73,7 +73,7 @@ class PolicyReviewService:
         )
 
         payload = {
-            "model": self.settings.hf_model,
+            "model": self.settings.policy_model,
             "messages": [
                 {
                     "role": "user",
@@ -83,11 +83,14 @@ class PolicyReviewService:
                     ],
                 }
             ],
-            "max_tokens": 500,
+            "max_tokens": 900,
             "temperature": 0.1,
-            # JSON mode keeps this path aligned with receipt extraction and page planning.
-            "response_format": {"type": "json_object"},
         }
+        # JSON mode keeps this path aligned with receipt extraction and page
+        # planning where supported. Qwen3-VL Thinking providers can reject that
+        # flag, so we fall back to prompt-constrained JSON and parse the object.
+        if supports_structured_outputs(self.settings.policy_model):
+            payload["response_format"] = {"type": "json_object"}
         headers = {
             "Authorization": f"Bearer {self.settings.hf_api_token}",
             "Content-Type": "application/json",

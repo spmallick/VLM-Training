@@ -59,6 +59,9 @@ def create_agent_router(
             {
                 "app_name": settings.app_name,
                 "hf_model": settings.hf_model,
+                "receipt_model": settings.receipt_model,
+                "policy_model": settings.policy_model,
+                "navigation_model": settings.navigation_model,
                 "has_hf_token": bool(settings.hf_api_token),
                 "companies": list_portal_companies(),
                 "tool_catalog": expense_agent_tool_catalog(),
