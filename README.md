@@ -12,11 +12,13 @@ After the receipt is accepted, you can launch the agent. A controlled browser op
 
 ## Quick Start
 
-Use the shared Codex virtual environment for this project:
+Clone the repository, enter the project directory, and activate a Python virtual environment:
 
 ```bash
-cd /Users/spmallick/github/VLM-Training
-source /Users/spmallick/.venv/codex/bin/activate
+git clone https://github.com/spmallick/VLM-Training.git
+cd VLM-Training
+python -m venv .venv
+source .venv/bin/activate
 ```
 
 Install dependencies if needed:
