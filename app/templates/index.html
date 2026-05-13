@@ -76,6 +76,21 @@
             Waiting for you to choose a company and provide a receipt image.
           </p>
         </section>
+
+        <section class="intake-commentary-panel" aria-live="polite">
+          <div class="card-header">
+            <div>
+              <p class="kicker">Run commentary</p>
+              <h2>Receipt intake trace</h2>
+            </div>
+            <span id="intake-commentary-status" class="status-chip muted">Waiting</span>
+          </div>
+          <ol id="intake-commentary-log" class="event-log intake-event-log"></ol>
+          <div id="extraction-json-wrap" class="intake-json-wrap" hidden>
+            <span class="meta-label">Extracted JSON</span>
+            <pre id="extraction-json" class="json-panel intake-json-panel"></pre>
+          </div>
+        </section>
       </main>
     </div>
     <script>

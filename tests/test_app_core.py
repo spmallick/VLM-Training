@@ -10,7 +10,13 @@ from app.policy import PolicyReviewService
 from app.schemas import ExpenseFields, ExtractionPayload
 from app.store import SessionStore
 from app.tools import CurrencyConverter
-from app.vision import ReceiptVisionService, normalize_amount, normalize_date, normalize_expense_category
+from app.vision import (
+    ReceiptVisionService,
+    normalize_amount,
+    normalize_date,
+    normalize_expense_category,
+    supports_structured_outputs,
+)
 
 
 def test_normalization_helpers():
@@ -19,6 +25,31 @@ def test_normalization_helpers():
     assert normalize_expense_category("Food & Beverage") == "Meals"
     assert normalize_expense_category("Transport") == "Travel"
     assert normalize_expense_category("") == ""
+
+
+def test_structured_outputs_disabled_for_thinking_model():
+    assert supports_structured_outputs("Qwen/Qwen3-VL-8B-Instruct:novita") is True
+    assert supports_structured_outputs("Qwen/Qwen3-VL-235B-A22B-Thinking:novita") is False
+
+
+def test_settings_split_model_roles():
+    settings = Settings(
+        _env_file=None,
+        HF_MODEL="fallback-model",
+        HF_RECEIPT_MODEL="receipt-model",
+        HF_POLICY_MODEL="policy-model",
+        HF_NAVIGATION_MODEL="navigation-model",
+    )
+
+    assert settings.receipt_model == "receipt-model"
+    assert settings.policy_model == "policy-model"
+    assert settings.navigation_model == "navigation-model"
+
+    fallback_settings = Settings(_env_file=None, HF_MODEL="fallback-model")
+
+    assert fallback_settings.receipt_model == "fallback-model"
+    assert fallback_settings.policy_model == "fallback-model"
+    assert fallback_settings.navigation_model == "fallback-model"
 
 
 def test_store_and_agent_normalization(tmp_path: Path):
@@ -162,6 +193,43 @@ def test_compute_reimbursement_uses_live_policy_and_full_reimbursement_fallback(
     assert with_policy.claim_amount_local == "75.00"
     assert no_policy.claim_amount_local == "100.00"
     assert "No live portal policy" in no_policy.explanation
+
+
+def test_compute_reimbursement_prorates_alcohol_tax_when_not_extracted(tmp_path: Path):
+    currency_rates_path = tmp_path / "currency_rates.json"
+    currency_rates_path.write_text('{"rates_to_usd":{"USD":1.0}}', encoding="utf-8")
+    settings = Settings(currency_rates_path=currency_rates_path)
+    extraction_template, _ = build_extraction_template("soberstack")
+    memory = build_working_memory(
+        company_slug="soberstack",
+        receipt_image_path=tmp_path / "receipt.jpg",
+        extraction=ExtractionPayload(
+            fields=ExpenseFields(
+                vendor="Indian Sizzler",
+                transaction_date="2026-05-10",
+                total="50.20",
+                subtotal="46.00",
+                tax="4.20",
+                currency="USD",
+                category="Meals",
+            ),
+            semantic_amounts={"alcohol_amount": "16.00", "alcohol_tax_amount": ""},
+            line_item_summary=["House wine glass x 1: $16.00", "Grand Adult Buffet x 1: $30.00"],
+            reasoning_summary="test",
+        ),
+        extraction_template=extraction_template,
+    )
+
+    result = compute_reimbursement(
+        "soberstack",
+        memory,
+        CurrencyConverter(settings.currency_rates_path),
+        live_policy_text="Alcohol and any tax attributable to alcohol are not reimbursable.",
+    )
+
+    assert result.excluded_amount_local == "17.46"
+    assert result.claim_amount_local == "32.74"
+    assert "alcohol tax" in result.explanation
 
 
 def test_normalized_capture_assessment_allows_soft_but_complete_receipts(tmp_path: Path):

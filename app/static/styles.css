@@ -806,6 +806,8 @@ textarea[readonly] {
 
 .simple-intake-wrap {
   width: min(720px, 100%);
+  display: grid;
+  gap: 18px;
 }
 
 .consultant-intake-card {
@@ -815,6 +817,36 @@ textarea[readonly] {
 
 .intake-status {
   margin: 0;
+}
+
+.intake-commentary-panel {
+  padding: 22px 24px;
+  border-radius: 28px;
+  background: rgba(255, 253, 249, 0.94);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.intake-event-log {
+  max-height: 300px;
+}
+
+.intake-event-item {
+  grid-template-columns: 84px 1fr;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.intake-event-item p {
+  white-space: pre-wrap;
+}
+
+.intake-json-wrap {
+  margin-top: 18px;
+}
+
+.intake-json-panel {
+  max-height: 360px;
+  font-size: 0.8rem;
 }
 
 .company-linked-note {
